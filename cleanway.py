@@ -10,6 +10,7 @@ nodes = dict()
 droppednodes = set()
 droppedways = set()
 ways = dict()
+agreed = set()
 # each way is ways[id]=(attributes, tags, nodes) where tags is a dict, nodes is a list and id is the way ID
 
 done_nodes = False
@@ -48,7 +49,7 @@ class OsmHandler():
                 (ways[self.id][2]).append(attributes['ref'])
                 
         if name == 'way':
-           if len(ways) >= 500:
+           if len(ways) >= 50000:
                 clean_ways(ways)
                 ways.clear()
 
@@ -69,6 +70,9 @@ class WTFEHandler():
             self.tags = {}
         if self.element == 'node' and name == 'user' and attributes['severity'] == 'normal':
             droppednodes.add(self.id)
+        if self.element == 'way' and name == 'user' and attributes['severity'] == 'normal':
+            droppedways.add(self.id)
+            
          
 def clean_nodes(nds):
     get_status(nds)
@@ -77,7 +81,7 @@ def clean_nodes(nds):
         if node not in droppednodes:
             out.write('<node')
             for k, v in attributes.iteritems():
-                out.write(' {}="{}"'.format(k, v))
+                out.write(u' {}="{}"'.format(k, v))
             out.write('/>\n')
             
 def clean_ways(wys):
@@ -106,14 +110,18 @@ def get_status(nds):
     
     # Build a list of nodes to fetch
     for node, attributes in nds.iteritems():
-        if attributes['version'] != '1' or int(attributes['uid']) < 286582:
+        if attributes['version'] == '1' and 'uid' in attributes and (int(attributes['uid']) < 286582 or 'uid' in agreed):
+            pass
+        else:
             tofetch.append(node)
+    print 'Fetching {} nodes'.format(len(tofetch))
     if len(tofetch) > 0:
-        url = 'http://wtfe.gryph.de/api/0.6/problems?nodes='
+        url = 'http://wtfe.gryph.de/api/0.6/problems'
+        query = 'nodes='
         for id in tofetch[0:-1]:
-            url += '{},'.format(id)
-        url += id
-        content = urllib2.urlopen(url)
+            query += '{},'.format(id)
+        query += id
+        content = urllib2.urlopen(url,query)
         content = StringIO.StringIO(content.read())
         handler=WTFEHandler()
         for event, elem in ElementTree.iterparse(content, events=('start', 'end')):
@@ -125,10 +133,44 @@ def get_status(nds):
 
 
 def get_way_status(wys):          
-    pass
+    tofetch = []
+    
+    # Build a list of nodes to fetch
+    for node, (attributes, _, _) in wys.iteritems():
+        if attributes['version'] == '1' and 'uid' in attributes and (int(attributes['uid']) < 286582 or 'uid' in agreed):
+            pass # easier than complicated de morgans
+        else:
+            tofetch.append(node)
+            
+    print 'Fetching {} ways'.format(len(tofetch))
+    if len(tofetch) > 0:
+        url = 'http://wtfe.gryph.de/api/0.6/problems'
+        query = 'ways='
+        for id in tofetch[0:-1]:
+            query += '{},'.format(id)
+        query += id
+        content = urllib2.urlopen(url,query)
+        content = StringIO.StringIO(content.read())
+        handler=WTFEHandler()
+        for event, elem in ElementTree.iterparse(content, events=('start', 'end')):
+            if event == 'start':
+                handler.startElement(elem.tag, elem.attrib)
+            elif event == 'end':
+                handler.endElement(elem.tag, elem.attrib)    
+
                 
 if __name__ == "__main__":
-    pass
+
+    # requires the output of curl http://planet.openstreetmap.org/users_agreed/users_agreed.txt | tail -n +3 > users_agreed.txt
+    with open('/home/pnorman/osm/cleanway/users_agreed.txt', mode='r') as f: 
+        for line in f: 
+            try:
+                agreed.add(str(int(line)))
+            except ValueError:
+                pass
+    
+    
+    
     xml = open(sys.argv[1], 'r')
     out = codecs.open(sys.argv[2], encoding='utf-8', mode='w')
     
@@ -142,7 +184,7 @@ if __name__ == "__main__":
         elif event == 'end':
             handler.endElement(elem.tag, elem.attrib)
             
-        if len(nodes) >= 500:
+        if len(nodes) >= 50000:
             clean_nodes(nodes)
             nodes.clear()
             
