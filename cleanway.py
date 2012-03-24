@@ -1,5 +1,6 @@
 import urllib2
 import xml.etree.cElementTree as ElementTree
+from xml.sax.saxutils import quoteattr
 import sys
 import StringIO
 import codecs
@@ -89,7 +90,7 @@ def clean_nodes(nds):
         if node not in droppednodes:
             out.write('<node')
             for k, v in attributes.iteritems():
-                out.write(u' {}="{}"'.format(k, v))
+                out.write(u' {}={}'.format(k, quoteattr(v)))
             out.write('/>\n')
             
 def clean_ways(wys):
@@ -106,14 +107,14 @@ def clean_ways(wys):
         if way not in droppedways:
             out.write('<way')
             for k, v in attributes.iteritems():
-                out.write(u' {}="{}"'.format(k, v))
+                out.write(u' {}={}'.format(k, quoteattr(v)))
             out.write('>\n')
             
             for nd in nodes:
                 if nd not in droppednodes:
                     out.write('<nd ref="{}" />\n'.format(nd))
             for k, v in tags.iteritems():
-                out.write(u'<tag k="{}" v="{}" />\n'.format(k,v))
+                out.write(u'<tag k={} v={} />\n'.format(quoteattr(k),quoteattr(v)))
             out.write('</way>\n')
        
             
