@@ -16,9 +16,6 @@ agreed = set()
 
 done_nodes = False
 
-total_nodes = 0
-total_ways = 0
-
 class OsmHandler():
     def __init__(self):
         self.element = None
@@ -34,7 +31,6 @@ class OsmHandler():
         if name == 'way':
             if not self.done_nodes:
                 print "finishing nodes"
-                total_nodes += len(nodes)
                 clean_nodes(nodes)
                 self.done_nodes = True
                 nodes.clear()
@@ -133,7 +129,7 @@ def get_status(nds):
             pass
         else:
             tofetch.append(node)
-    print 'Fetching {} of {} nodes. {} processed.'.format(len(tofetch), len(nds), total_nodes)
+    print 'Fetching {} of {} nodes.'.format(len(tofetch), len(nds))
     if len(tofetch) > 0:
         url = 'http://wtfe.gryph.de/api/0.6/problems'
         query = 'nodes='
@@ -177,7 +173,7 @@ def get_way_status(wys):
             elif event == 'end':
                 handler.endElement(elem.tag, elem.attrib)    
 
-                
+
 if __name__ == "__main__":
 
     # requires the output of curl http://planet.openstreetmap.org/users_agreed/users_agreed.txt | tail -n +3 > users_agreed.txt
@@ -197,14 +193,19 @@ if __name__ == "__main__":
     out.write('<osm version="0.6" generator="cleanway.py">\n')
 
     handler = OsmHandler()
-    for event, elem in ElementTree.iterparse(xml, events=('start', 'end')):
+    context = ElementTree.iterparse(xml, events=('start', 'end'))
+    context = iter(context)
+    event, root = context.next()
+    
+    for event, elem in context:
         if event == 'start':
             handler.startElement(elem.tag, elem.attrib)
         elif event == 'end':
             handler.endElement(elem.tag, elem.attrib)
+            elem.clear()
+            root.clear()
             
         if len(nodes) >= 50000:
-            total_nodes += len(nodes)
             clean_nodes(nodes)
             nodes.clear()
             
