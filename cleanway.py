@@ -16,6 +16,9 @@ agreed = set()
 
 done_nodes = False
 
+total_nodes = 0
+total_ways = 0
+
 class OsmHandler():
     def __init__(self):
         self.element = None
@@ -31,6 +34,7 @@ class OsmHandler():
         if name == 'way':
             if not self.done_nodes:
                 print "finishing nodes"
+                total_nodes += len(nodes)
                 clean_nodes(nodes)
                 self.done_nodes = True
                 nodes.clear()
@@ -129,7 +133,7 @@ def get_status(nds):
             pass
         else:
             tofetch.append(node)
-    print 'Fetching {} nodes'.format(len(tofetch))
+    print 'Fetching {} of {} nodes. {} processed.'.format(len(tofetch), len(nds), total_nodes)
     if len(tofetch) > 0:
         url = 'http://wtfe.gryph.de/api/0.6/problems'
         query = 'nodes='
@@ -200,6 +204,7 @@ if __name__ == "__main__":
             handler.endElement(elem.tag, elem.attrib)
             
         if len(nodes) >= 50000:
+            total_nodes += len(nodes)
             clean_nodes(nodes)
             nodes.clear()
             
