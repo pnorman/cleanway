@@ -106,14 +106,12 @@ def clean_ways(wys):
         if way not in droppedways:
             out.write('<way')
             for k, v in attributes.iteritems():
-                out.write(' {}="{}"'.format(k, v))
+                out.write(u' {}="{}"'.format(k, v))
             out.write('>\n')
             
             for nd in nodes:
                 if nd not in droppednodes:
                     out.write('<nd ref="{}" />\n'.format(nd))
-                else:
-                    print 'dropped {}'.format(nd)
             for k, v in tags.iteritems():
                 out.write(u'<tag k="{}" v="{}" />\n'.format(k,v))
             out.write('</way>\n')
@@ -135,7 +133,7 @@ def get_status(nds):
         query = 'nodes='
         for id in tofetch[0:-1]:
             query += '{},'.format(id)
-        query += id
+        query += tofetch[-1]
         content = urllib2.urlopen(url,query, timeout=60)
         content = StringIO.StringIO(content.read())
         handler=WTFEHandler()
@@ -163,7 +161,7 @@ def get_way_status(wys):
         query = 'ways='
         for id in tofetch[0:-1]:
             query += '{},'.format(id)
-        query += id
+        query += tofetch[-1]
         content = urllib2.urlopen(url,query, timeout=60)
         content = StringIO.StringIO(content.read())
         handler=WTFEHandler()
