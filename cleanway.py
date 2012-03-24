@@ -75,8 +75,15 @@ class WTFEHandler():
             
          
 def clean_nodes(nds):
-    get_status(nds)
 
+    fetched = False
+    while not fetched:
+        try:
+            get_status(nds)
+            fetched = True
+        except urllib2.URLError:
+            pass
+    
     for node, attributes in nds.iteritems():
         if node not in droppednodes:
             out.write('<node')
@@ -85,7 +92,14 @@ def clean_nodes(nds):
             out.write('/>\n')
             
 def clean_ways(wys):
-    get_way_status(wys)
+    fetched = False
+    while not fetched:
+        try:
+            get_way_status(wys)
+            fetched = True
+        except urllib2.URLError:
+            pass
+       
 
     for way, (attributes,tags,nodes) in wys.iteritems():
         if way not in droppedways:
@@ -121,7 +135,7 @@ def get_status(nds):
         for id in tofetch[0:-1]:
             query += '{},'.format(id)
         query += id
-        content = urllib2.urlopen(url,query)
+        content = urllib2.urlopen(url,query, timeout=60)
         content = StringIO.StringIO(content.read())
         handler=WTFEHandler()
         for event, elem in ElementTree.iterparse(content, events=('start', 'end')):
@@ -149,7 +163,7 @@ def get_way_status(wys):
         for id in tofetch[0:-1]:
             query += '{},'.format(id)
         query += id
-        content = urllib2.urlopen(url,query)
+        content = urllib2.urlopen(url,query, timeout=60)
         content = StringIO.StringIO(content.read())
         handler=WTFEHandler()
         for event, elem in ElementTree.iterparse(content, events=('start', 'end')):
