@@ -3,6 +3,7 @@ import xml.etree.cElementTree as ElementTree
 import sys
 import StringIO
 import codecs
+import os
 
 from datetime import datetime
 
@@ -176,7 +177,7 @@ def get_way_status(wys):
 if __name__ == "__main__":
 
     # requires the output of curl http://planet.openstreetmap.org/users_agreed/users_agreed.txt | tail -n +3 > users_agreed.txt
-    with open('/home/pnorman/osm/cleanway/users_agreed.txt', mode='r') as f: 
+    with open(os.path.realpath(os.path.dirname(sys.argv[0])) + '/users_agreed.txt', mode='r') as f: 
         for line in f: 
             try:
                 agreed.add(str(int(line)))
