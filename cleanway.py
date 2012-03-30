@@ -13,6 +13,11 @@ droppednodes = set()
 droppedways = set()
 ways = dict()
 agreed = set()
+
+
+known_nodes = set()  # a list of known clean nodes.
+known_ways = set()
+
 # each way is ways[id]=(attributes, tags, nodes) where tags is a dict, nodes is a list and id is the way ID
 
 done_nodes = False
@@ -72,7 +77,7 @@ class WTFEHandler():
             self.tags = {}
         if self.element == 'node' and name == 'user' and attributes['severity'] == 'normal':
             droppednodes.add(self.id)
-        if self.element == 'way' and name == 'user' and attributes['severity'] == 'normal':
+        if self.element == 'way' and name == 'user' and attributes['severity'] == 'normal' and attributes['version'] == 'first':
             droppedways.add(self.id)
             
          
@@ -92,6 +97,8 @@ def clean_nodes(nds):
             for k, v in attributes.iteritems():
                 out.write(u' {}={}'.format(k, quoteattr(v)))
             out.write('/>\n')
+            
+    
             
 def clean_ways(wys):
     fetched = False
@@ -116,9 +123,7 @@ def clean_ways(wys):
             for k, v in tags.iteritems():
                 out.write(u'<tag k={} v={} />\n'.format(quoteattr(k),quoteattr(v)))
             out.write('</way>\n')
-       
-            
-          
+
 def get_status(nds):
     tofetch = []
     
@@ -127,7 +132,8 @@ def get_status(nds):
         if attributes['version'] == '1' and 'uid' in attributes and (int(attributes['uid']) < 286582 or 'uid' in agreed):
             pass
         else:
-            tofetch.append(node)
+            if not node in known_nodes:
+                tofetch.append(node)
     print 'Fetching {} of {} nodes.'.format(len(tofetch), len(nds))
     if len(tofetch) > 0:
         url = 'http://wtfe.gryph.de/api/0.6/problems'
@@ -143,18 +149,23 @@ def get_status(nds):
                 handler.startElement(elem.tag, elem.attrib)
             elif event == 'end':
                 handler.endElement(elem.tag, elem.attrib)
-                
+        for id in tofetch:
+            if id not in droppednodes:
+                known_nodes.add(id)
 
 
 def get_way_status(wys):          
     tofetch = []
     
     # Build a list of nodes to fetch
-    for node, (attributes, _, _) in wys.iteritems():
+    for way, (attributes, tags, _) in wys.iteritems():
         if attributes['version'] == '1' and 'uid' in attributes and (int(attributes['uid']) < 286582 or 'uid' in agreed):
             pass # easier than complicated de morgans
         else:
-            tofetch.append(node)
+            if 'odbl' in tags and tags['odbl'] == 'clean':
+                pass
+            elif not way in known_ways:
+                tofetch.append(way)
             
     print 'Fetching {} ways'.format(len(tofetch))
     if len(tofetch) > 0:
@@ -171,7 +182,10 @@ def get_way_status(wys):
                 handler.startElement(elem.tag, elem.attrib)
             elif event == 'end':
                 handler.endElement(elem.tag, elem.attrib)    
-
+                
+        for id in tofetch:
+            if id not in droppednodes:
+                known_ways.add(id)
 
 if __name__ == "__main__":
 
@@ -183,6 +197,19 @@ if __name__ == "__main__":
             except ValueError:
                 pass
     
+    with open(os.path.realpath(os.path.dirname(sys.argv[0])) + '/known_nodes.txt', mode='r') as f:
+        for line in f:
+            try:
+                known_nodes.add(str(int(line)))
+            except ValueError:
+                pass
+                
+    with open(os.path.realpath(os.path.dirname(sys.argv[0])) + '/known_ways.txt', mode='r') as f:
+        for line in f:
+            try:
+                known_ways.add(str(int(line)))
+            except ValueError:
+                pass
     
     
     xml = open(sys.argv[1], 'r')
@@ -210,4 +237,12 @@ if __name__ == "__main__":
             
     clean_ways(ways)
     ways.clear()
-    out.write('</osm>\n')                
+    out.write('</osm>\n')   
+
+    with open(os.path.realpath(os.path.dirname(sys.argv[0])) + '/known_nodes.txt', mode='w') as f:
+        for id in known_nodes:
+            f.write('{}\n'.format(id))
+            
+    with open(os.path.realpath(os.path.dirname(sys.argv[0])) + '/known_ways.txt', mode='w') as f:
+        for id in known_ways:
+            f.write('{}\n'.format(id))            
