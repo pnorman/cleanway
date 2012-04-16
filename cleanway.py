@@ -14,7 +14,7 @@ droppedways = set()
 ways = dict()
 agreed = set()
 
-
+CHUNK_SIZE = 500000
 known_nodes = set()  # a list of known clean nodes.
 known_ways = set()
 
@@ -56,7 +56,7 @@ class OsmHandler():
                 (ways[self.id][2]).append(attributes['ref'])
                 
         if name == 'way':
-           if len(ways) >= 50000:
+           if len(ways) >= CHUNK_SIZE:
                 clean_ways(ways)
                 ways.clear()
 
@@ -75,7 +75,7 @@ class WTFEHandler():
         if name in ('node', 'way', 'relation'):
             self.element = ''
             self.tags = {}
-        if self.element == 'node' and name == 'user' and attributes['severity'] == 'normal':
+        if self.element == 'node' and name == 'user' and attributes['severity'] == 'normal' and attributes['version'] == 'first':
             droppednodes.add(self.id)
         if self.element == 'way' and name == 'user' and attributes['severity'] == 'normal' and attributes['version'] == 'first':
             droppedways.add(self.id)
@@ -231,7 +231,7 @@ if __name__ == "__main__":
             elem.clear()
             root.clear()
             
-        if len(nodes) >= 50000:
+        if len(nodes) >= CHUNK_SIZE:
             clean_nodes(nodes)
             nodes.clear()
             
